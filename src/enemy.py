@@ -1,0 +1,104 @@
+import pygame
+import random
+import math
+
+class Enemy:
+    def __init__(self, screen_width, screen_height):
+        self.size = 25
+        self.radius = self.size // 2
+        self.x, self.y = self.random_position(screen_width, screen_height)
+        self.speed = 2
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.base_color = self.random_color()
+        # 각 적마다 고유한 진동 타이밍을 가지도록
+        self.pulse_offset = random.random() * math.pi * 2
+        self.birth_time = pygame.time.get_ticks()
+
+    def random_color(self):
+        # 더 세련된 색상 팔레트
+        colors = [
+            (231, 76, 60),   # 빨강
+            (230, 126, 34),  # 주황
+            (241, 196, 15),  # 노랑
+            (46, 204, 113),  # 초록
+            (52, 152, 219),  # 파랑
+            (155, 89, 182)   # 보라
+        ]
+        return random.choice(colors)
+
+    def random_position(self, screen_width, screen_height):
+        # 화면 테두리에서 랜덤하게 생성
+        side = random.choice(['top', 'bottom', 'left', 'right'])
+        if side == 'top':
+            return random.randint(0, screen_width - self.size), -self.size
+        elif side == 'bottom':
+            return random.randint(0, screen_width - self.size), screen_height
+        elif side == 'left':
+            return -self.size, random.randint(0, screen_height - self.size)
+        else:  # right
+            return screen_width, random.randint(0, screen_height - self.size)
+
+    def check_collision(self, other_enemy):
+        # 두 적 사이의 거리 계산
+        dx = self.x - other_enemy.x
+        dy = self.y - other_enemy.y
+        distance = math.sqrt(dx * dx + dy * dy)
+            
+        # 충돌 발생 (두 적의 크기 합보다 거리가 작을 때)
+        if distance < self.size:
+            # 겹침을 방지하기 위해 서로를 밀어냄
+            if distance > 0:
+                # 방향 벡터 정규화
+                dx = dx / distance
+                dy = dy / distance
+                
+                # 겹친 정도의 절반만큼 각각 밀어냄
+                push = (self.size - distance) / 2
+                self.x += dx * push
+                self.y += dy * push
+                other_enemy.x -= dx * push
+                other_enemy.y -= dy * push
+
+    def update(self, player_x, player_y, other_enemies=None):
+        # 플레이어 방향으로 이동
+        dx = player_x - self.x
+        dy = player_y - self.y
+        distance = math.sqrt(dx * dx + dy * dy)
+        
+        if distance != 0:
+            # 정규화된 방향 벡터 계산
+            dx = dx / distance * self.speed
+            dy = dy / distance * self.speed
+            
+            self.x += dx
+            self.y += dy
+
+        # 다른 적들과의 충돌 검사
+        if other_enemies:
+            for other in other_enemies:
+                if other != self:  # 자기 자신과는 충돌 검사 하지 않음
+                    self.check_collision(other)
+
+    def get_pulse_color(self):
+        # 시간에 따라 밝기가 변하는 효과
+        current_time = pygame.time.get_ticks()
+        pulse = math.sin((current_time / 500) + self.pulse_offset) * 0.2 + 0.8
+        return tuple(int(c * pulse) for c in self.base_color)
+
+    def draw(self, screen):
+        # 메인 원
+        color = self.get_pulse_color()
+        pygame.draw.circle(screen, color, (int(self.x), int(self.y)), self.radius)
+        
+        # 내부 원 (코어)
+        inner_radius = int(self.radius * 0.6)
+        inner_color = tuple(min(255, int(c * 1.3)) for c in color)  # 더 밝은 색상
+        pygame.draw.circle(screen, inner_color, (int(self.x), int(self.y)), inner_radius)
+        
+        # 외곽선 효과
+        glow_radius = int(self.radius * 1.1)
+        glow_color = (*color[:3], 100)  # 반투명한 색상
+        glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(glow_surface, glow_color, (glow_radius, glow_radius), glow_radius)
+        screen.blit(glow_surface, (self.x - glow_radius, self.y - glow_radius))
