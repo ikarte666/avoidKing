@@ -1,10 +1,11 @@
 import pygame
+import math
 from .bullet import Bullet
 import time
 
 class Player:
     def __init__(self):
-        self.size = 25
+        self.size = 30  # 25에서 30으로 변경 (1.2배)
         self.radius = self.size // 2
         self.x = 400 - self.radius
         self.y = 300 - self.radius
@@ -20,14 +21,34 @@ class Player:
         self.shot_cooldown = 0.5
 
     def draw_player(self, screen):
-        # 플레이어의 외부 원
-        pygame.draw.circle(screen, self.colors['main'], (int(self.x), int(self.y)), self.radius)
+        # 별의 중심점
+        center = (int(self.x), int(self.y))
+        points = []
         
-        # 플레이어의 내부 원 (코어)
-        inner_radius = int(self.radius * 0.7)
-        pygame.draw.circle(screen, self.colors['core'], (int(self.x), int(self.y)), inner_radius)
+        # 5개의 점을 가진 별 모양 생성
+        outer_radius = self.radius  # 외부 점 반지름
+        inner_radius = self.radius * 0.5  # 내부 점 반지름 (0.4에서 0.5로 조정)
         
-        # 하이라이트 효과 (왼쪽 상단에 작은 원)
+        for i in range(5):
+            # 외부 점
+            angle = math.pi * 2 * i / 5 - math.pi / 2
+            outer_x = center[0] + outer_radius * math.cos(angle)
+            outer_y = center[1] + outer_radius * math.sin(angle)
+            points.append((outer_x, outer_y))
+            
+            # 내부 점
+            inner_angle = angle + math.pi / 5
+            inner_x = center[0] + inner_radius * math.cos(inner_angle)
+            inner_y = center[1] + inner_radius * math.sin(inner_angle)
+            points.append((inner_x, inner_y))
+
+        # 별 그리기
+        pygame.draw.polygon(screen, self.colors['main'], points)
+        
+        # 중심 원 (크기 조정)
+        pygame.draw.circle(screen, self.colors['core'], center, int(self.radius * 0.35))
+        
+        # 하이라이트 효과 (위치 조정)
         highlight_pos = (int(self.x - self.radius * 0.3), int(self.y - self.radius * 0.3))
         pygame.draw.circle(screen, self.colors['outline'], highlight_pos, int(self.radius * 0.2))
 

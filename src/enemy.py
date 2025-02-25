@@ -87,18 +87,27 @@ class Enemy:
         return tuple(int(c * pulse) for c in self.base_color)
 
     def draw(self, screen):
-        # 메인 원
+        # 메인 사각형
         color = self.get_pulse_color()
-        pygame.draw.circle(screen, color, (int(self.x), int(self.y)), self.radius)
+        rect = pygame.Rect(int(self.x - self.radius), int(self.y - self.radius), self.size, self.size)
+        pygame.draw.rect(screen, color, rect)
         
-        # 내부 원 (코어)
-        inner_radius = int(self.radius * 0.6)
-        inner_color = tuple(min(255, int(c * 1.3)) for c in color)  # 더 밝은 색상
-        pygame.draw.circle(screen, inner_color, (int(self.x), int(self.y)), inner_radius)
+        # 내부 사각형 (코어)
+        inner_size = int(self.size * 0.6)
+        inner_offset = (self.size - inner_size) // 2
+        inner_rect = pygame.Rect(int(self.x - self.radius + inner_offset), 
+                               int(self.y - self.radius + inner_offset), 
+                               inner_size, inner_size)
+        inner_color = tuple(min(255, int(c * 1.3)) for c in color)
+        pygame.draw.rect(screen, inner_color, inner_rect)
         
         # 외곽선 효과
-        glow_radius = int(self.radius * 1.1)
-        glow_color = (*color[:3], 100)  # 반투명한 색상
-        glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
-        pygame.draw.circle(glow_surface, glow_color, (glow_radius, glow_radius), glow_radius)
-        screen.blit(glow_surface, (self.x - glow_radius, self.y - glow_radius))
+        glow_size = int(self.size * 1.2)
+        glow_offset = (glow_size - self.size) // 2
+        glow_surface = pygame.Surface((glow_size, glow_size), pygame.SRCALPHA)
+        glow_color = (*color[:3], 100)
+        glow_rect = pygame.Rect(0, 0, glow_size, glow_size)
+        pygame.draw.rect(glow_surface, glow_color, glow_rect)
+        screen.blit(glow_surface, 
+                   (int(self.x - self.radius - glow_offset), 
+                    int(self.y - self.radius - glow_offset)))
