@@ -28,9 +28,7 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and game.game_over:
-                game.restart()
+        game.handle_event(event)  # 이벤트 처리
 
     # 게임 업데이트
     game.update()

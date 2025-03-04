@@ -17,6 +17,7 @@ class Game:
         self.game_over = False
         self.end_time = None  # 게임 오버 시점의 시간을 저장
         self.score = 0  # 점수 초기화
+        self.start_screen = True  # 시작 화면 플래그 추가
         
         # UI 폰트 초기화
         pygame.font.init()
@@ -37,8 +38,23 @@ class Game:
             'new_record': (241, 196, 15),  # 골드
         }
 
+        # pygame.mixer.init()
+        # pygame.mixer.music.load('bgm.mp4')  # 배경 음악 파일 경로
+        # pygame.mixer.music.play(-1)  # 무한 반복 재생
+
+        # 난이도 관련 변수 수정
+        self.spawn_interval = 3.0  # 초기 적 생성 간격 (3초)
+        self.spawn_count = 3  # 초기 적 생성 수 (3마리로 시작)
+        self.enemy_speed = self.player.speed * 0.5  # 초기 적 속도 (플레이어 속도의 50%)
+        self.last_spawn_time = time.time()
+        self.last_difficulty_update = time.time()  # 마지막 난이도 업데이트 시간
+        self.last_spawn_count_update = time.time()  # 적 생성 수 업데이트 타이머
+        self.difficulty_level = 0  # 난이도 레벨 추적
+
     def update(self):
-        if not self.game_over:
+        if self.start_screen:
+            self.draw_start_screen()
+        elif not self.game_over:
             self.screen.fill(self.COLORS['background'])
             self.draw_grid()  # 배경 그리드 추가
             self.player.update(self.screen)
@@ -47,6 +63,7 @@ class Game:
             self.check_collisions()
             self.check_bullet_collisions()  # 총알 충돌 검사 추가
             self.draw_ui()
+            self.update_difficulty()  # 난이도 조절
         else:
             self.draw_game_over()
 
@@ -63,12 +80,36 @@ class Game:
             pygame.draw.line(self.screen, self.COLORS['grid'], (0, y), (self.screen.get_width(), y))
 
     def spawn_enemies(self):
-        self.spawn_timer += 1
-        if self.spawn_timer >= 60:  # 1초마다 2마리 생성 (60프레임 기준)
-            self.spawn_timer = 0
-            for _ in range(2):  # 4마리에서 2마리로 수정
-                enemy = Enemy(self.screen.get_width(), self.screen.get_height())
+        current_time = time.time()
+        if current_time - self.last_spawn_time >= self.spawn_interval:
+            self.last_spawn_time = current_time
+            for _ in range(self.spawn_count):
+                enemy = Enemy(self.screen.get_width(), self.screen.get_height(), self.enemy_speed)
                 self.enemies.append(enemy)
+
+    def update_difficulty(self):
+        current_time = time.time()
+        elapsed_time = current_time - self.start_time
+        
+        # 8초마다 난이도 업데이트
+        if current_time - self.last_difficulty_update >= 8:
+            self.last_difficulty_update = current_time
+            self.difficulty_level += 1
+            
+            # 적 생성 간격 감소 (최소 1초)
+            if self.spawn_interval > 1.0:
+                self.spawn_interval = max(1.0, 3.0 - (self.difficulty_level * 0.2))
+            
+            # 적 속도 증가 (최대 플레이어 속도)
+            if self.enemy_speed < self.player.speed:
+                self.enemy_speed = min(self.player.speed, 
+                                     self.player.speed * (0.5 + self.difficulty_level * 0.1))
+        
+        # 10초마다 적 생성 수 증가 (최대 10마리)
+        if current_time - self.last_spawn_count_update >= 10:
+            self.last_spawn_count_update = current_time
+            if self.spawn_count < 10:
+                self.spawn_count += 1
 
     def update_enemies(self):
         for enemy in self.enemies:
@@ -173,6 +214,16 @@ class Game:
         restart_rect = restart_text.get_rect(center=(self.screen.get_width()/2, panel_y + 240))
         self.screen.blit(restart_text, restart_rect)
 
+    def draw_start_screen(self):
+        self.screen.fill(self.COLORS['background'])
+        title_text = self.large_font.render('AVOID KING', True, self.COLORS['ui_text'])
+        title_rect = title_text.get_rect(center=(self.screen.get_width() / 2, self.screen.get_height() / 2 - 50))
+        self.screen.blit(title_text, title_rect)
+
+        start_text = self.font.render('Press SPACE to Start', True, self.COLORS['ui_text'])
+        start_rect = start_text.get_rect(center=(self.screen.get_width() / 2, self.screen.get_height() / 2 + 50))
+        self.screen.blit(start_text, start_rect)
+
     def restart(self):
         self.enemies = []
         self.spawn_timer = 0
@@ -181,6 +232,22 @@ class Game:
         self.end_time = None
         self.player = Player()
         self.score = 0  # 점수 초기화
+        self.start_screen = False  # 게임 시작 시 시작 화면 플래그 해제
+        self.spawn_interval = 3.0  # 초기화
+        self.spawn_count = 3  # 3마리로 초기화
+        self.enemy_speed = self.player.speed * 0.5  # 플레이어 속도의 50%로 초기화
+        self.last_spawn_time = time.time()
+        self.last_difficulty_update = time.time()
+        self.last_spawn_count_update = time.time()
+        self.difficulty_level = 0
+
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                if self.start_screen:
+                    self.start_screen = False
+                elif self.game_over:
+                    self.restart()
 
     def load_high_score(self):
         try:

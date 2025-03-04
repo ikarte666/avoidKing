@@ -19,6 +19,7 @@ class Player:
         self.bullets = []
         self.last_shot_time = 0
         self.shot_cooldown = 0.5
+        self.animation_offset = 0
 
     def draw_player(self, screen):
         # 별의 중심점
@@ -45,8 +46,14 @@ class Player:
         # 별 그리기
         pygame.draw.polygon(screen, self.colors['main'], points)
         
+        self.animation_offset += 0.1
+        if self.animation_offset > 2 * math.pi:
+            self.animation_offset = 0
+        animation_scale = 1 + 0.1 * math.sin(self.animation_offset)
+        scaled_radius = int(self.radius * animation_scale)
+
         # 중심 원 (크기 조정)
-        pygame.draw.circle(screen, self.colors['core'], center, int(self.radius * 0.35))
+        pygame.draw.circle(screen, self.colors['core'], center, int(scaled_radius * 0.35))
         
         # 하이라이트 효과 (위치 조정)
         highlight_pos = (int(self.x - self.radius * 0.3), int(self.y - self.radius * 0.3))

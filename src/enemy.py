@@ -3,17 +3,18 @@ import random
 import math
 
 class Enemy:
-    def __init__(self, screen_width, screen_height):
+    def __init__(self, screen_width, screen_height, speed):
         self.size = 25
         self.radius = self.size // 2
         self.x, self.y = self.random_position(screen_width, screen_height)
-        self.speed = 2
+        self.speed = speed  # 속도를 초기화
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.base_color = self.random_color()
         # 각 적마다 고유한 진동 타이밍을 가지도록
         self.pulse_offset = random.random() * math.pi * 2
         self.birth_time = pygame.time.get_ticks()
+        self.animation_offset = random.random() * math.pi * 2
 
     def random_color(self):
         # 더 세련된 색상 팔레트
@@ -89,7 +90,12 @@ class Enemy:
     def draw(self, screen):
         # 메인 사각형
         color = self.get_pulse_color()
-        rect = pygame.Rect(int(self.x - self.radius), int(self.y - self.radius), self.size, self.size)
+        self.animation_offset += 0.1
+        if self.animation_offset > 2 * math.pi:
+            self.animation_offset = 0
+        animation_scale = 1 + 0.1 * math.sin(self.animation_offset)
+        scaled_size = int(self.size * animation_scale)
+        rect = pygame.Rect(int(self.x - scaled_size / 2), int(self.y - scaled_size / 2), scaled_size, scaled_size)
         pygame.draw.rect(screen, color, rect)
         
         # 내부 사각형 (코어)
